@@ -4,7 +4,7 @@ importScripts('lib/heuristics.js', 'lib/store.js');
 
 const S = globalThis.FoxioStore;
 const BOARD_URL = chrome.runtime.getURL('dashboard/dashboard.html');
-const CONTENT_FILES = ['lib/heuristics.js', 'lib/store.js', 'content/content.js'];
+const CONTENT_FILES = ['lib/heuristics.js', 'lib/store.js', 'content/audit/engine.js', 'content/audit/rules.js', 'content/content.js'];
 
 // ---- session state (survives service-worker restarts, cleared on browser exit)
 async function getSession() {
@@ -48,7 +48,9 @@ async function handle(msg, sender) {
       return { active: !!s.active[msg.tabId] };
     }
     case 'foxio:toggleTab':
-      return toggleTab(msg.tabId);
+      return sendToTab(msg.tabId, { type: 'foxio:toggle' });
+    case 'foxio:auditTab':
+      return sendToTab(msg.tabId, { type: 'foxio:audit' });
     case 'foxio:capture':
       return capture(sender.tab, msg);
     case 'foxio:openBoard':
@@ -63,14 +65,14 @@ async function handle(msg, sender) {
 }
 
 // ---- activation
-async function toggleTab(tabId) {
+async function sendToTab(tabId, message) {
   try {
-    return await chrome.tabs.sendMessage(tabId, { type: 'foxio:toggle' });
+    return await chrome.tabs.sendMessage(tabId, message);
   } catch (e) {
     // Tab was open before Foxio was installed/reloaded: inject and retry.
     try {
       await chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_FILES });
-      return await chrome.tabs.sendMessage(tabId, { type: 'foxio:toggle' });
+      return await chrome.tabs.sendMessage(tabId, message);
     } catch (e2) {
       return { error: 'Foxio can’t run on this page (browser pages and the Web Store are off-limits).' };
     }
@@ -80,7 +82,7 @@ async function toggleTab(tabId) {
 chrome.commands.onCommand.addListener(async command => {
   if (command !== 'toggle-foxio') return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab) toggleTab(tab.id);
+  if (tab) sendToTab(tab.id, { type: 'foxio:toggle' });
 });
 
 // ---- board / deep links
@@ -108,7 +110,12 @@ async function openComment(id) {
 }
 
 // ---- screenshots: capture the visible tab and crop around the element
+// captureVisibleTab is limited to ~2 calls per second; audits capture in bursts.
+let lastCapture = 0;
 async function capture(tab, { rect, point, viewport }) {
+  const wait = lastCapture + 550 - Date.now();
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  lastCapture = Date.now();
   const shot = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
   const bmp = await createImageBitmap(await (await fetch(shot)).blob());
   const scale = bmp.width / viewport.w; // device pixel ratio as captured

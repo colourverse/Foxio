@@ -9,7 +9,7 @@
     comments: [],
     settings: { author: '' },
     groupBy: localStorage.getItem('foxio.groupBy') || 'status',
-    f: { q: '', site: '', page: '', priority: '', type: '', heur: '' },
+    f: { q: '', site: '', page: '', priority: '', type: '', heur: '', source: '' },
     openId: null
   };
 
@@ -28,7 +28,7 @@
   }
 
   function filtered() {
-    const { q, site, page, priority, type, heur } = state.f;
+    const { q, site, page, priority, type, heur, source } = state.f;
     const needle = q.trim().toLowerCase();
     return state.comments.filter(c =>
       (!site || c.site === site) &&
@@ -36,6 +36,7 @@
       (!priority || c.priority === priority) &&
       (!type || c.type === type) &&
       (!heur || c.heuristic === heur) &&
+      (!source || (c.source || 'manual') === source) &&
       (!needle || [c.body, c.url, c.pageTitle, c.author, (c.anchor || {}).text, ...(c.replies || []).map(r => r.body)]
         .join(' ').toLowerCase().includes(needle)));
   }
@@ -62,6 +63,7 @@
     fillSelect($('fPriority'), 'Any priority', S.PRIORITIES, state.f.priority);
     fillSelect($('fType'), 'Any type', S.TYPES, state.f.type);
     fillSelect($('fHeur'), 'Any heuristic', HEUR.map(h => ({ id: h.id, label: h.short })), state.f.heur);
+    fillSelect($('fSource'), 'People & audit', [{ id: 'manual', label: 'People only' }, { id: 'audit', label: 'Audit only' }], state.f.source);
   }
 
   // ------------------------------------------------------------- board
@@ -105,7 +107,7 @@
         <div class="card-top">
           ${secondary}
           <span class="type t-${c.type}">${esc(label(S.TYPES, c.type))}</span>
-          ${c.source === 'audit' ? '<span class="type t-audit">Audit</span>' : ''}
+          ${c.source === 'audit' ? `<span class="type t-audit" title="Automated audit${c.audit && c.audit.severity ? ' \u00b7 ' + c.audit.severity : ''}">Audit</span>` : ''}
           <span class="num">#${c.number}</span>
         </div>
         ${c.screenshot ? `<img class="thumb" src="${c.screenshot}" alt="" loading="lazy">` : ''}
@@ -308,7 +310,7 @@
 
   // ------------------------------------------------------------- filters wiring
   $('q').addEventListener('input', e => { state.f.q = e.target.value; render(); });
-  [['fSite', 'site'], ['fPage', 'page'], ['fPriority', 'priority'], ['fType', 'type'], ['fHeur', 'heur']].forEach(([id, k]) =>
+  [['fSite', 'site'], ['fPage', 'page'], ['fPriority', 'priority'], ['fType', 'type'], ['fHeur', 'heur'], ['fSource', 'source']].forEach(([id, k]) =>
     $(id).addEventListener('change', e => {
       state.f[k] = e.target.value;
       if (k === 'site') { state.f.page = ''; renderFilters(); }

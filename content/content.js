@@ -13,6 +13,7 @@
   let comments = [], settings = { author: '' };
   let pop = null; // { node, commentId?, anchor?, point? }
   let ticker = null, rafQueued = false, lastHref = location.href;
+  let audit = null; // { node, result, hoverEl, busy }
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const isOurs = e => !!host && e.composedPath().includes(host);
@@ -41,6 +42,10 @@
           <svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 7v6M9 10h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           <span>Comment</span>
         </button>
+        <button class="tb" data-act="audit" title="Run a UX audit of this page (A)">
+          <svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.3L20 9l-4.4 3.8L17 19l-5-3-5 3 1.4-6.2L4 9l5.8-.7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span>Audit</span>
+        </button>
         <button class="tb" data-act="pins" title="Show / hide pins (P)">
           <svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
           <span class="count">0</span>
@@ -62,6 +67,7 @@
       toolbar: root.querySelector('.toolbar'),
       count: root.querySelector('.count'),
       commentBtn: root.querySelector('[data-act="comment"]'),
+      auditBtn: root.querySelector('[data-act="audit"]'),
       pinsBtn: root.querySelector('[data-act="pins"]')
     };
 
@@ -85,6 +91,7 @@
     if (btn && el.toolbar.contains(btn)) {
       const act = btn.dataset.act;
       if (act === 'comment') setCommentMode(!commentMode);
+      else if (act === 'audit') audit ? closeAudit() : runAudit();
       else if (act === 'pins') togglePins();
       else if (act === 'board') send({ type: 'foxio:openBoard' });
       else if (act === 'close') deactivate();
@@ -114,6 +121,7 @@
     active = false;
     setCommentMode(false);
     closePop();
+    closeAudit();
     clearInterval(ticker);
     removePageListeners();
     if (host) host.style.display = 'none';
@@ -149,6 +157,10 @@
     if (!commentMode || isOurs(e)) { if (el.hl) el.hl.hidden = true; return; }
     const t = e.target;
     if (!t || t.nodeType !== 1) return;
+    showHighlight(t);
+  }
+
+  function showHighlight(t) {
     const r = t.getBoundingClientRect();
     Object.assign(el.hl.style, { transform: `translate(${r.left}px, ${r.top}px)`, width: r.width + 'px', height: r.height + 'px' });
     el.hlTag.textContent = describe(t) + '  ' + Math.round(r.width) + '×' + Math.round(r.height);
@@ -175,12 +187,14 @@
     if (e.key === 'Escape') {
       if (pop) { closePop(); e.stopPropagation(); }
       else if (commentMode) { setCommentMode(false); e.stopPropagation(); }
+      else if (audit && !audit.busy) { closeAudit(); e.stopPropagation(); }
       return;
     }
     if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key.toLowerCase();
     if (k === 'c') { setCommentMode(!commentMode); e.preventDefault(); e.stopPropagation(); }
     else if (k === 'p') { togglePins(); e.preventDefault(); e.stopPropagation(); }
+    else if (k === 'a' && !audit) { runAudit(); e.preventDefault(); e.stopPropagation(); }
   }
 
   function schedulePosition() {
@@ -209,6 +223,8 @@
   }
 
   function cssPath(node) {
+    if (node === document.documentElement) return 'html';
+    if (node === document.body) return 'body';
     if (node.id && document.querySelectorAll('#' + CSS.escape(node.id)).length === 1) return '#' + CSS.escape(node.id);
     const parts = [];
     let cur = node;
@@ -251,6 +267,13 @@
       label: describe(node),
       text: (node.innerText || node.getAttribute('alt') || node.getAttribute('aria-label') || node.value || '').trim().replace(/\s+/g, ' ').slice(0, 140)
     };
+  }
+
+  // Anchor for an element we didn't click (audit findings): pin near its top-left corner.
+  function anchorFor(node) {
+    const r = node.getBoundingClientRect();
+    const fake = { clientX: r.left + Math.min(10, r.width / 2), clientY: r.top + Math.min(10, r.height / 2) };
+    return buildAnchor(node, fake, r);
   }
 
   function findAnchorEl(a) {
@@ -311,6 +334,7 @@
       n.style.transform = `translate(${p.x}px, ${p.y}px)`;
       n.classList.toggle('lost', !p.found);
     }
+    if (audit && audit.hoverEl) showHighlight(audit.hoverEl);
     if (pop) {
       let p = null;
       if (pop.commentId) { const c = byId.get(pop.commentId); if (c) p = resolveAnchor(c.anchor); }
@@ -503,6 +527,213 @@
     setTimeout(() => openViewer(id), 450);
   }
 
+  // ------------------------------------------------------------- UX audit (Phase 2)
+  function auditKey(f) { return f.ruleId + '|' + cssPath(f.el); }
+  const isPageLevel = n => n === document.body || n === document.documentElement;
+
+  function closeAudit() {
+    if (!audit || audit.busy) return;
+    audit.node.remove();
+    audit = null;
+    if (el.hl) el.hl.hidden = true;
+    if (el.auditBtn) el.auditBtn.classList.remove('on');
+  }
+
+  async function runAudit() {
+    await buildUI();
+    if (!active) await activate();
+    if (audit) closeAudit();
+    setCommentMode(false);
+    closePop();
+    const AUD = globalThis.FoxioAudit;
+    const result = AUD.run();
+    if (result.errors.length) console.warn('[Foxio audit] rule errors:', result.errors);
+    await loadComments();
+
+    // Compare with open audit findings already on the board for this page.
+    const openAudit = comments.filter(c => c.source === 'audit' && c.audit && c.status !== 'done');
+    const known = new Set(openAudit.map(c => c.audit.key));
+    result.findings.forEach(f => { f.key = auditKey(f); f.onBoard = known.has(f.key); });
+    const foundKeys = new Set(result.findings.map(f => f.key));
+    const ranRules = new Set(AUD.rules.map(r => r.id));
+    // Only call a finding "fixed" when its rule ran and its list wasn't truncated.
+    const fixed = openAudit.filter(c => ranRules.has(c.audit.rule) && !result.truncated[c.audit.rule] && !foundKeys.has(c.audit.key));
+
+    const SEV = AUD.SEVERITY;
+    const counts = { blocker: 0, major: 0, minor: 0, cosmetic: 0 };
+    result.findings.forEach(f => counts[f.severity]++);
+    const fresh = result.findings.filter(f => !f.onBoard);
+    const scoreClass = result.score >= 85 ? 'good' : result.score >= 60 ? 'ok' : 'poor';
+    const more = Object.values(result.truncated).reduce((a, b) => a + b, 0);
+
+    const node = document.createElement('div');
+    node.className = 'audit-panel';
+    node.setAttribute('role', 'dialog');
+    node.setAttribute('aria-label', 'UX audit results');
+    node.innerHTML = `
+      <div class="pop-head">
+        <strong>UX audit</strong>
+        <span class="muted">${result.findings.length} finding${result.findings.length === 1 ? '' : 's'} &middot; ${result.ruleCount} checks &middot; ${result.ms}ms</span>
+        <button class="x" data-act="close" aria-label="Close">&times;</button>
+      </div>
+      <div class="ap-score">
+        <div class="score ${scoreClass}" title="Heuristic score: 100 minus weighted findings">${result.score}</div>
+        <div class="ap-counts">
+          ${['blocker', 'major', 'minor', 'cosmetic'].filter(s => counts[s]).map(s => `<span class="sev sev-${s}">${counts[s]} ${SEV[s].label.toLowerCase()}</span>`).join('') || '<span class="muted">No issues found by the automated checks.</span>'}
+          ${more ? `<div class="muted small">+${more} more similar issue${more > 1 ? 's' : ''} not listed</div>` : ''}
+        </div>
+      </div>
+      ${fresh.length ? `
+      <div class="ap-tools">
+        <button class="link" data-act="all">Select all</button>
+        <button class="link" data-act="none">Select none</button>
+      </div>` : ''}
+      <ol class="ap-list">
+        ${result.findings.map((f, i) => {
+          const h = HEUR.find(x => x.id === f.heuristic);
+          return `
+          <li class="finding${f.onBoard ? ' on-board' : ''}" data-i="${i}">
+            <input type="checkbox" id="f${i}" ${f.onBoard ? 'disabled' : 'checked'}>
+            <div class="f-main">
+              <div class="f-top">
+                <span class="sev sev-${f.severity}">${SEV[f.severity].label}</span>
+                ${h ? `<span class="f-heur" title="${esc(h.name)}">${esc(h.short)}</span>` : ''}
+                ${f.onBoard ? '<span class="f-heur done">On board</span>' : ''}
+                ${isPageLevel(f.el) ? '' : `<button class="locate" data-act="locate" title="Show on page" aria-label="Show on page">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>`}
+              </div>
+              <label for="f${i}" class="f-title">${esc(f.title)}</label>
+              <p class="f-detail">${esc(f.detail)}</p>
+              <p class="f-fix"><b>Fix:</b> ${esc(f.suggestion)}</p>
+            </div>
+          </li>`;
+        }).join('')}
+      </ol>
+      ${fixed.length ? `
+      <label class="ap-fixed"><input type="checkbox" id="apFixed" checked>
+        Mark ${fixed.length} earlier finding${fixed.length > 1 ? 's' : ''} as Done (no longer detected)</label>` : ''}
+      <div class="actions">
+        ${fresh.length ? '<label class="shots"><input type="checkbox" id="apShots" checked> Screenshots</label>' : ''}
+        <span class="spacer"></span>
+        <button class="btn ghost" data-act="close">Close</button>
+        ${fresh.length || fixed.length ? '<button class="btn primary" data-act="accept"></button>' : ''}
+      </div>`;
+
+    root.appendChild(node);
+    audit = { node, hoverEl: null, busy: false };
+    el.auditBtn.classList.add('on');
+
+    const acceptBtn = node.querySelector('[data-act="accept"]');
+    const selected = () => result.findings.filter((f, i) => !f.onBoard && node.querySelector('#f' + i).checked);
+    const fixedChosen = () => { const fx = node.querySelector('#apFixed'); return fx && fx.checked ? fixed : []; };
+    const updateCount = () => {
+      if (!acceptBtn) return;
+      const n = selected().length, nf = fixedChosen().length;
+      acceptBtn.textContent = n ? `Add ${n} to board` : nf ? `Mark ${nf} done` : 'Add to board';
+      acceptBtn.disabled = !n && !nf;
+    };
+    updateCount();
+
+    node.addEventListener('change', updateCount);
+    node.addEventListener('mouseover', e => {
+      if (!audit) return;
+      const li = e.target.closest('.finding');
+      const f = li && result.findings[+li.dataset.i];
+      const target = f && f.el.isConnected && !isPageLevel(f.el) ? f.el : null;
+      if (target === audit.hoverEl) return;
+      audit.hoverEl = target;
+      if (target) showHighlight(target); else el.hl.hidden = true;
+    });
+    node.addEventListener('mouseleave', () => { if (audit) { audit.hoverEl = null; el.hl.hidden = true; } });
+    node.addEventListener('click', async e => {
+      const act = e.target.closest('[data-act]');
+      if (!act || audit.busy) return;
+      const a = act.dataset.act;
+      if (a === 'close') closeAudit();
+      else if (a === 'all' || a === 'none') {
+        node.querySelectorAll('.finding:not(.on-board) input').forEach(c => { c.checked = a === 'all'; });
+        updateCount();
+      } else if (a === 'locate') {
+        const f = result.findings[+act.closest('.finding').dataset.i];
+        if (f.el.isConnected) { f.el.scrollIntoView({ block: 'center', behavior: 'smooth' }); audit.hoverEl = f.el; }
+      } else if (a === 'accept') {
+        const shots = node.querySelector('#apShots');
+        await acceptAudit(selected(), !!(shots && shots.checked), fixedChosen(), acceptBtn);
+      }
+    });
+  }
+
+  async function acceptAudit(list, withShots, fixedList, btn) {
+    const SEV = globalThis.FoxioAudit.SEVERITY;
+    const MAX_SHOTS = 20;
+    const startY = window.scrollY;
+    audit.busy = true;
+    audit.node.classList.add('busy');
+    btn.disabled = true;
+    let added = 0;
+    try {
+      for (let i = 0; i < list.length; i++) {
+        const f = list[i];
+        if (!f.el.isConnected) continue;
+        btn.textContent = `Adding ${i + 1} of ${list.length}…`;
+        let screenshot = null;
+        if (withShots && i < MAX_SHOTS && !isPageLevel(f.el)) {
+          f.el.scrollIntoView({ block: 'center', behavior: 'instant' });
+          host.style.visibility = 'hidden';
+          await frame(); await frame();
+          const r = f.el.getBoundingClientRect();
+          const a = anchorFor(f.el);
+          const res = await send({
+            type: 'foxio:capture',
+            rect: { x: r.left, y: r.top, w: r.width, h: r.height },
+            point: { x: a.docX - window.scrollX, y: a.docY - window.scrollY },
+            viewport: { w: window.innerWidth, h: window.innerHeight }
+          });
+          host.style.visibility = '';
+          screenshot = res && res.dataUrl || null;
+        }
+        await S.create({
+          url: location.href,
+          pageTitle: document.title,
+          anchor: anchorFor(f.el),
+          viewport: { w: window.innerWidth, h: window.innerHeight },
+          body: `${f.title}\n\n${f.detail}\n\nSuggested fix: ${f.suggestion}`,
+          type: f.type,
+          priority: f.priority,
+          heuristic: f.heuristic,
+          screenshot,
+          author: 'Foxio audit',
+          source: 'audit',
+          audit: { rule: f.ruleId, key: f.key, severity: SEV[f.severity].label }
+        });
+        added++;
+      }
+      for (const c of fixedList) await S.update(c.id, { status: 'done' });
+    } finally {
+      host.style.visibility = '';
+      window.scrollTo({ top: startY, behavior: 'instant' });
+      audit.busy = false;
+      closeAudit();
+    }
+    await loadComments();
+    send({ type: 'foxio:changed' });
+    const parts = [];
+    if (added) parts.push(`Added ${added} finding${added > 1 ? 's' : ''} to the board`);
+    if (fixedList.length) parts.push(`${fixedList.length} marked done`);
+    toast(parts.join(' · '));
+  }
+
+  function toast(text) {
+    if (!text) return;
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.setAttribute('role', 'status');
+    t.textContent = text;
+    root.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+  }
+
   function timeAgo(t) {
     const s = Math.round((Date.now() - t) / 1000);
     if (s < 60) return 'just now';
@@ -516,6 +747,10 @@
   chrome.runtime.onMessage.addListener((m, sender, reply) => {
     if (m.type === 'foxio:toggle') {
       (active ? Promise.resolve(deactivate()) : activate()).then(() => reply({ active }));
+      return true;
+    }
+    if (m.type === 'foxio:audit') {
+      activate().then(() => { runAudit(); reply({ ok: true }); });
       return true;
     }
     if (m.type === 'foxio:focus') {

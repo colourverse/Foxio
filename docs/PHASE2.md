@@ -2,6 +2,46 @@
 
 Goal: one click runs a heuristic audit of the current page. Each finding becomes a normal Foxio comment that is pinned to its element, tagged with a heuristic, and dropped into Backlog, ready to triage alongside human feedback.
 
+## Status
+
+| Milestone | State |
+| --- | --- |
+| 1. Rule engine + first rules | **Done**: 11 rules in `content/audit/rules.js` |
+| 2. Audit UI (run, preview, accept) + dedupe/re-run | **Done** |
+| 3. Remaining rules + per-site rule settings | Not started |
+| 4. Backend + LLM tier (with team sync) | Not started |
+
+### Rules shipped
+
+| Rule id | Checks | Heuristic |
+| --- | --- | --- |
+| `text-contrast` | WCAG AA text contrast (4.5:1, 3:1 large); grouped per colour pair | a11y |
+| `img-alt` | Images without `alt` | a11y |
+| `control-name` | Buttons/links with no accessible name | a11y |
+| `form-label` | Unlabelled fields; placeholder used as the only label | a11y / h6 |
+| `target-size` | Targets under 24×24px; inline text links exempt; grouped per container | a11y |
+| `headings` | Missing h1, multiple h1, skipped levels | h4 / a11y |
+| `primary-action` | No button above the fold stands out (≥3:1 fill vs. background) | h8 |
+| `nav-size` | Navigation with more than 9 visible items | h8 |
+| `vague-links` | "Read more", "Click here", etc. | h2 |
+| `readability` | Text under 12px; lines over ~100 characters | a11y / h8 |
+| `page-setup` | Missing `lang`, zoom disabled, no viewport meta | a11y / h4 |
+
+### How it behaves
+
+- **Severity → priority:** blocker → Critical, major → High, minor → Medium, cosmetic → Low.
+- **Caps:** at most 8 findings per rule. Extra ones count toward the score and show as "+N more".
+- **Score:** `100 × e^(−penalty/90)`, where the penalty is weighted by severity. It's a relative signal, not a grade.
+- **Dedupe:** each finding has a key `ruleId|cssSelector`, stored on the comment as `audit.key`. Re-runs skip keys that are already open on the board. Open audit comments whose key is no longer found are offered as "Mark done". This only happens if their rule ran and wasn't capped, so a capped list can't produce false "fixed" results.
+- **Screenshots:** the page scrolls to each finding and captures it, up to 20 per run. Captures are throttled to stay under Chrome's limit of 2 per second, then the page scrolls back.
+- **Adding a rule:** call `FoxioAudit.register({ id, name, heuristic, run(ctx) })` in `rules.js`. `ctx` provides `els`, `isVisible`, `ownText`, `backgroundOf`, `contrast`, `accessibleName` and `describe`.
+
+### Known limits
+
+- Contrast is skipped over background images and gradients, where the true background colour is unknown.
+- Only the top frame is audited. Shadow DOM contents and iframes are not checked yet.
+- Checks run on the current viewport size. Run again at mobile width to catch mobile-only issues.
+
 ## What Phase 1 already provides
 
 - The comment record has `source: 'manual' | 'audit'`. Audit pins render square, and audit cards get an "Audit" badge.

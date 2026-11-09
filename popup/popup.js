@@ -21,11 +21,17 @@
   } else {
     $('site').textContent = 'This page can’t be annotated';
     $('toggle').disabled = true;
+    $('audit').disabled = true;
   }
 
   $('toggle').addEventListener('click', async () => {
     if (!settings.author && $('author').value.trim()) await S.saveSettings({ author: $('author').value.trim() });
     const res = await chrome.runtime.sendMessage({ type: 'foxio:toggleTab', tabId: tab.id });
+    if (res && res.error) { $('error').textContent = res.error; $('error').hidden = false; return; }
+    window.close();
+  });
+  $('audit').addEventListener('click', async () => {
+    const res = await chrome.runtime.sendMessage({ type: 'foxio:auditTab', tabId: tab.id });
     if (res && res.error) { $('error').textContent = res.error; $('error').hidden = false; return; }
     window.close();
   });
