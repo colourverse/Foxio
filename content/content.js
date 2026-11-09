@@ -87,6 +87,8 @@
   }
 
   function onUIClick(e) {
+    const guide = e.target.closest('[data-act="guide"]');
+    if (guide) { send({ type: 'foxio:openGuide', id: guide.dataset.h || '' }); return; }
     const btn = e.target.closest('[data-act]');
     if (btn && el.toolbar.contains(btn)) {
       const act = btn.dataset.act;
@@ -409,6 +411,7 @@
         <label>Priority<select name="priority">${opt(S.PRIORITIES, 'medium')}</select></label>
         <label>Heuristic<select name="heuristic"><option value="">None</option>${HEUR.map(h => `<option value="${h.id}" title="${esc(h.desc)}">${esc(h.short)}</option>`).join('')}</select></label>
       </div>
+      <p class="heur-hint" aria-live="polite"></p>
       <div class="actions">
         <span class="kbd">⌘/Ctrl + Enter to save</span>
         <button class="btn ghost" data-act="cancel">Cancel</button>
@@ -416,6 +419,15 @@
       </div>`;
     const ta = node.querySelector('textarea');
     let type = 'issue';
+    const hint = node.querySelector('.heur-hint');
+    const renderHint = () => {
+      const h = HEUR.find(x => x.id === node.querySelector('[name="heuristic"]').value);
+      hint.innerHTML = h
+        ? `<b>${esc(h.name)}.</b> ${esc(h.desc)} <button class="link" data-act="guide" data-h="${h.id}">Guide \u2197</button>`
+        : `Optional: tag the usability principle this relates to. <button class="link" data-act="guide">What do these mean? \u2197</button>`;
+    };
+    renderHint();
+    node.querySelector('[name="heuristic"]').addEventListener('change', renderHint);
     node.addEventListener('click', ev => {
       const chip = ev.target.closest('.chip');
       if (chip) {
@@ -471,7 +483,7 @@
         <button class="x" data-act="close" aria-label="Close">&times;</button>
       </div>
       <p class="body">${esc(c.body)}</p>
-      ${h ? `<span class="heur" title="${esc(h.desc)}">${esc(h.name)}</span>` : ''}
+      ${h ? `<button class="heur" data-act="guide" data-h="${h.id}" title="${esc(h.desc)} \u2014 open the heuristics guide">${esc(h.name)} <span aria-hidden="true">\u2197</span></button>` : ''}
       ${c.source === 'audit' ? '<span class="heur audit">Automated audit</span>' : ''}
       ${(c.replies || []).length ? `<ul class="replies">${c.replies.map(r => `<li><b>${esc(r.author)}</b> <span class="muted">${timeAgo(r.createdAt)}</span><br>${esc(r.body)}</li>`).join('')}</ul>` : ''}
       <div class="grid">
@@ -597,7 +609,7 @@
             <div class="f-main">
               <div class="f-top">
                 <span class="sev sev-${f.severity}">${SEV[f.severity].label}</span>
-                ${h ? `<span class="f-heur" title="${esc(h.name)}">${esc(h.short)}</span>` : ''}
+                ${h ? `<button class="f-heur" data-act="guide" data-h="${h.id}" title="${esc(h.name)}: ${esc(h.desc)}">${esc(h.short)}</button>` : ''}
                 ${f.onBoard ? '<span class="f-heur done">On board</span>' : ''}
                 ${isPageLevel(f.el) ? '' : `<button class="locate" data-act="locate" title="Show on page" aria-label="Show on page">
                   <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>

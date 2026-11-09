@@ -119,7 +119,8 @@
   const helpers = { isVisible, elements, ownText, parseColor, backgroundOf, contrast, hex, accessibleName, describe };
 
   // ---------------------------------------------------------------- engine
-  function register(rule) { rules.push(rule); }
+  // rule.covers lists every heuristic a rule can report against (defaults to its main one).
+  function register(rule) { rule.covers = rule.covers || [rule.heuristic]; rules.push(rule); }
 
   function run() {
     const t0 = performance.now();

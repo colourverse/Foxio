@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Foxio Heuristics Guide</title>
+  <link rel="icon" href="../icons/icon32.png">
+  <link rel="stylesheet" href="heuristics.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="../dashboard/dashboard.html"><img src="../icons/icon48.png" alt="" width="30" height="30"><span>Foxio</span></a>
+    <span class="crumb">Heuristics guide</span>
+    <span class="spacer"></span>
+    <a class="btn" href="../dashboard/dashboard.html">Open the board</a>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Heuristics">
+      <p class="toc-title">On this page</p>
+      <ol id="toc"></ol>
+      <a class="toc-extra" href="#severity">Severity and priority</a>
+    </nav>
+
+    <main>
+      <section class="intro">
+        <h1>Usability heuristics</h1>
+        <p class="lead">Heuristics are broad rules of thumb for interface design. Tagging feedback with one explains <em>why</em> something is a problem, not just what to change, and makes patterns visible on the board.</p>
+        <p>Foxio uses Jakob Nielsen’s 10 usability heuristics, which are widely used in design reviews, plus <strong>Accessibility</strong> based on WCAG. Each section below explains the principle, what violations typically look like, and how to fix them. Where the automated audit checks a heuristic, the checks are listed.</p>
+      </section>
+
+      <div id="list"></div>
+
+      <section class="card" id="severity">
+        <div class="card-head"><span class="badge muted">!</span><h2>Severity and priority</h2></div>
+        <p>The audit rates each finding by severity, which becomes the card’s priority on the board. Use the same scale when you set the priority of your own comments.</p>
+        <table>
+          <thead><tr><th>Priority</th><th>Audit severity</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><span class="prio p-critical">Critical</span></td><td>Blocker</td><td>Stops people completing a key task, or excludes some users entirely. Fix before release.</td></tr>
+            <tr><td><span class="prio p-high">High</span></td><td>Major</td><td>Causes significant difficulty, errors or frustration. Fix soon.</td></tr>
+            <tr><td><span class="prio p-medium">Medium</span></td><td>Minor</td><td>Slows people down or annoys them, but they get there. Schedule it.</td></tr>
+            <tr><td><span class="prio p-low">Low</span></td><td>Cosmetic</td><td>Polish. Fix when there is time.</td></tr>
+          </tbody>
+        </table>
+        <p class="fine">Based on Nielsen’s severity ratings, which weigh how often a problem occurs, how much it hurts when it does, and whether users can work around it.</p>
+      </section>
+    </main>
+  </div>
+
+  <script src="../lib/heuristics.js"></script>
+  <script src="../lib/store.js"></script>
+  <script src="../content/audit/engine.js"></script>
+  <script src="../content/audit/rules.js"></script>
+  <script src="heuristics.js"></script>
+</body>
+</html>

@@ -209,3 +209,12 @@ label select { text-transform: none; letter-spacing: 0; font-weight: 400; font-s
   box-shadow: 0 8px 24px rgba(0,0,0,.25); pointer-events: none; animation: rise .2s ease-out;
 }
 @keyframes rise { from { transform: translate(-50%, 8px); opacity: 0; } }
+
+/* ---------- heuristics guide links */
+.heur-hint { margin: 0; font-size: 12px; line-height: 1.45; color: #4a4450; background: #f8f6f3; border-radius: 8px; padding: 8px 10px; }
+.heur-hint b { color: #1d1b22; }
+button.heur, button.f-heur { all: unset; cursor: pointer; }
+button.heur { align-self: flex-start; font-size: 11px; font-weight: 600; color: #8a3b0b; background: #fff0e6; padding: 3px 8px; border-radius: 999px; }
+button.f-heur { font-size: 11px; font-weight: 600; color: #8a3b0b; background: #fff0e6; padding: 2px 7px; border-radius: 999px; }
+button.heur:hover, button.f-heur:hover { background: #ffe0cc; }
+button.heur:focus-visible, button.f-heur:focus-visible { outline: 2px solid #FF6A13; outline-offset: 1px; }

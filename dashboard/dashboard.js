@@ -227,6 +227,7 @@
         <label class="field">Type<select data-field="type">${options(S.TYPES, c.type)}</select></label>
         <label class="field">Heuristic<select data-field="heuristic"><option value="">None</option>${options(HEUR.map(h => ({ id: h.id, label: h.name })), c.heuristic)}</select></label>
       </div>
+      <p class="heur-hint" id="drHeurHint"></p>
       <dl class="dr-meta">
         <dt>Element</dt><dd><code>${esc(a.selector || '—')}</code></dd>
         ${a.text ? `<dt>Text</dt><dd>“${esc(a.text)}”</dd>` : ''}
@@ -252,8 +253,11 @@
       const v = e.target.value;
       t = setTimeout(() => v.trim() && S.update(c.id, { body: v.trim() }), 400);
     });
-    d.querySelectorAll('select[data-field]').forEach(s => s.addEventListener('change', () =>
-      S.update(c.id, { [s.dataset.field]: s.value || null })));
+    d.querySelectorAll('select[data-field]').forEach(s => s.addEventListener('change', () => {
+      S.update(c.id, { [s.dataset.field]: s.value || null });
+      if (s.dataset.field === 'heuristic') heurHint(s.value);
+    }));
+    heurHint(c.heuristic);
     $('drOpen').onclick = () => chrome.runtime.sendMessage({ type: 'foxio:openComment', id: c.id });
     $('drDelete').onclick = async () => {
       if (!confirm(`Delete comment #${c.number}? This can't be undone.`)) return;
@@ -266,6 +270,13 @@
       $('drReply').value = '';
       document.activeElement.blur();
     };
+  }
+
+  function heurHint(id) {
+    const h = HEUR.find(x => x.id === id);
+    $('drHeurHint').innerHTML = h
+      ? `<b>${esc(h.name)}.</b> ${esc(h.desc)} <a href="../heuristics/heuristics.html#${h.id}" target="_blank">Learn more \u2197</a>`
+      : 'Tag the usability principle this feedback relates to. <a href="../heuristics/heuristics.html" target="_blank">What do these mean? \u2197</a>';
   }
 
   // ------------------------------------------------------------- header actions
@@ -334,6 +345,9 @@
   }
 
   // ------------------------------------------------------------- boot
+  // Deep links from the guide: dashboard.html?heur=h4
+  const heurParam = new URLSearchParams(location.search).get('heur');
+  if (heurParam && HEUR.some(h => h.id === heurParam)) state.f.heur = heurParam;
   S.onChange(load);
   load().then(() => {
     const focus = new URLSearchParams(location.search).get('focus');

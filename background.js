@@ -4,6 +4,7 @@ importScripts('lib/heuristics.js', 'lib/store.js');
 
 const S = globalThis.FoxioStore;
 const BOARD_URL = chrome.runtime.getURL('dashboard/dashboard.html');
+const GUIDE_URL = chrome.runtime.getURL('heuristics/heuristics.html');
 const CONTENT_FILES = ['lib/heuristics.js', 'lib/store.js', 'content/audit/engine.js', 'content/audit/rules.js', 'content/content.js'];
 
 // ---- session state (survives service-worker restarts, cleared on browser exit)
@@ -55,6 +56,8 @@ async function handle(msg, sender) {
       return capture(sender.tab, msg);
     case 'foxio:openBoard':
       return openBoard(msg.focus);
+    case 'foxio:openGuide':
+      return openGuide(msg.id);
     case 'foxio:openComment':
       return openComment(msg.id);
     case 'foxio:changed':
@@ -89,6 +92,19 @@ chrome.commands.onCommand.addListener(async command => {
 async function openBoard(focus) {
   const url = BOARD_URL + (focus ? '?focus=' + encodeURIComponent(focus) : '');
   const [existing] = await chrome.tabs.query({ url: BOARD_URL + '*' });
+  if (existing) {
+    await chrome.tabs.update(existing.id, { active: true, url });
+    await chrome.windows.update(existing.windowId, { focused: true });
+  } else {
+    await chrome.tabs.create({ url });
+  }
+  return { ok: true };
+}
+
+// Heuristics guide, optionally scrolled to one heuristic. Reuses an open guide tab.
+async function openGuide(id) {
+  const url = GUIDE_URL + (id ? '#' + encodeURIComponent(id) : '');
+  const [existing] = await chrome.tabs.query({ url: GUIDE_URL + '*' });
   if (existing) {
     await chrome.tabs.update(existing.id, { active: true, url });
     await chrome.windows.update(existing.windowId, { focused: true });

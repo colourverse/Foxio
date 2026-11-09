@@ -35,6 +35,11 @@
     if (res && res.error) { $('error').textContent = res.error; $('error').hidden = false; return; }
     window.close();
   });
+  $('guide').addEventListener('click', async e => {
+    e.preventDefault();
+    await chrome.runtime.sendMessage({ type: 'foxio:openGuide' });
+    window.close();
+  });
   $('board').addEventListener('click', async () => {
     await chrome.runtime.sendMessage({ type: 'foxio:openBoard' });
     window.close();

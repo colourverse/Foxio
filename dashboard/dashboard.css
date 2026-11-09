@@ -127,3 +127,8 @@ textarea { resize: vertical; width: 100%; }
   .board { padding: 4px 16px 16px; grid-auto-columns: 86vw; }
   .filters input[type=search] { width: 100%; }
 }
+
+a.btn { color: inherit; text-decoration: none; }
+.heur-hint { margin: -4px 0 0; font-size: 13px; color: var(--muted); background: var(--col); border-radius: 10px; padding: 9px 12px; }
+.heur-hint b { color: var(--fg); }
+.heur-hint a { color: var(--accent-ink); font-weight: 600; }

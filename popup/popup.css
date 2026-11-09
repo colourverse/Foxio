@@ -21,3 +21,5 @@ button:disabled { opacity: .5; cursor: default; }
 .error { color: #d93025; font-size: 12px; }
 .tip { white-space: normal; max-width: none; }
 kbd { font: inherit; font-size: 11px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; }
+.guide { align-self: center; font-size: 12px; font-weight: 600; color: #b84a08; }
+@media (prefers-color-scheme: dark) { .guide { color: #ff9a5c; } }

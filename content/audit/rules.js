@@ -70,7 +70,7 @@
 
   // ------------------------------------------------------------ form labels
   A.register({
-    id: 'form-label', name: 'Form fields are labelled', heuristic: 'a11y',
+    id: 'form-label', name: 'Form fields are labelled', heuristic: 'a11y', covers: ['a11y', 'h6'],
     run(ctx) {
       const out = [];
       document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), select, textarea')
@@ -130,7 +130,7 @@
 
   // ------------------------------------------------------------ headings
   A.register({
-    id: 'headings', name: 'Heading structure', heuristic: 'h4',
+    id: 'headings', name: 'Heading structure', heuristic: 'h4', covers: ['h4', 'a11y'],
     run(ctx) {
       const hs = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6, [role="heading"][aria-level]')).filter(ctx.isVisible);
       const level = h => h.getAttribute('aria-level') ? +h.getAttribute('aria-level') : +h.tagName[1];
@@ -230,7 +230,7 @@
 
   // ------------------------------------------------------------ readability
   A.register({
-    id: 'readability', name: 'Readable body text', heuristic: 'h8',
+    id: 'readability', name: 'Readable body text', heuristic: 'h8', covers: ['h8', 'a11y'],
     run(ctx) {
       const small = new Map(), long = [];
       for (const el of ctx.els) {
@@ -266,7 +266,7 @@
 
   // ------------------------------------------------------------ page level
   A.register({
-    id: 'page-setup', name: 'Page language and zoom', heuristic: 'a11y',
+    id: 'page-setup', name: 'Page language and zoom', heuristic: 'a11y', covers: ['a11y', 'h4'],
     run() {
       const out = [];
       const anchor = document.body || document.documentElement;

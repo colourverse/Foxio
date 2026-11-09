@@ -35,6 +35,15 @@ Pins stay attached to their elements through scrolling, resizing and navigation 
 
 Re-running the audit skips findings already on the board and offers to mark findings that are no longer detected as **Done**. See [`docs/PHASE2.md`](docs/PHASE2.md) for the full list of checks and what's next.
 
+### Heuristics guide
+
+Foxio includes a reference page for the heuristics you can tag feedback with: Nielsen's 10 usability heuristics plus Accessibility (WCAG). For each one it explains what the principle means and why it matters, gives common violations and fixes, and shows a good and a bad example. It also lists which audit checks cover it and how many comments on your board are tagged with it, with a link to the filtered board. A severity scale explains how to choose priorities.
+
+To open it:
+- **Heuristics guide** in the board header or the popup.
+- Any heuristic chip on a pin or audit finding opens the guide at that heuristic.
+- The comment composer and the board's card details explain the selected heuristic inline, with a link to the guide.
+
 ### The board
 
 - **Columns:** group by **Status** (Backlog → To do → In progress → Done) or by **Priority** (Critical → Low). Drag cards between columns to change that field, or within a column to reorder.
@@ -54,6 +63,7 @@ content/content.js     on-page overlay (shadow DOM): toolbar, picker, composer, 
 content/overlay.css    overlay styles
 popup/                 toolbar popup
 dashboard/             Kanban board (extension page)
+heuristics/            Heuristics guide (extension page; content lives in lib/heuristics.js)
 docs/PHASE2.md         plan for the automated UX audit
 ```
 
