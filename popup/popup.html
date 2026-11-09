@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Foxio</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="../icons/icon48.png" alt="" width="28" height="28">
+    <div>
+      <h1>Foxio</h1>
+      <p id="site" class="muted">&nbsp;</p>
+    </div>
+  </header>
+
+  <section class="stats">
+    <div><strong id="open">0</strong><span>open on this page</span></div>
+    <div><strong id="total">0</strong><span>total, all sites</span></div>
+  </section>
+
+  <label class="me">Your name <input id="author" placeholder="Shown on your comments" autocomplete="name"></label>
+
+  <button id="toggle" class="primary">Start annotating</button>
+  <button id="board">Open the board</button>
+  <p id="error" class="error" hidden></p>
+  <p class="muted tip">Shortcut: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> &middot; then <kbd>C</kbd> to comment</p>
+
+  <script src="../lib/store.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

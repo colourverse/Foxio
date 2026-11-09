@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Foxio — Visual Design Feedback",
+  "short_name": "Foxio",
+  "version": "0.1.0",
+  "description": "Pin design comments and suggestions to any element on any web page, then triage them on a Kanban board.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Foxio",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["storage", "unlimitedStorage", "tabs", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*", "file:///*"],
+      "js": ["lib/heuristics.js", "lib/store.js", "content/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content/overlay.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "commands": {
+    "toggle-foxio": {
+      "suggested_key": { "default": "Alt+Shift+F" },
+      "description": "Toggle Foxio on the current page"
+    }
+  }
+}

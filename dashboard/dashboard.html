@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Foxio Board</title>
+  <link rel="icon" href="../icons/icon32.png">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><img src="../icons/icon48.png" alt="" width="30" height="30"><span>Foxio</span></div>
+    <div class="stats" id="stats"></div>
+    <div class="spacer"></div>
+    <label class="me">You <input id="author" placeholder="Your name" autocomplete="name"></label>
+    <button id="exportJson" class="btn" title="Download everything, including screenshots, to share or back up">Export JSON</button>
+    <button id="exportCsv" class="btn" title="Spreadsheet-friendly export (no screenshots)">Export CSV</button>
+    <button id="importBtn" class="btn">Import</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+  </header>
+
+  <div class="filters">
+    <input type="search" id="q" placeholder="Search feedback, pages, people&hellip;" aria-label="Search">
+    <select id="fSite" aria-label="Site"></select>
+    <select id="fPage" aria-label="Page"></select>
+    <select id="fPriority" aria-label="Priority"></select>
+    <select id="fType" aria-label="Type"></select>
+    <select id="fHeur" aria-label="Heuristic"></select>
+    <div class="spacer"></div>
+    <div class="seg" id="groupBy" role="group" aria-label="Columns">
+      <span>Columns</span>
+      <button data-v="status" class="on">Status</button>
+      <button data-v="priority">Priority</button>
+    </div>
+  </div>
+
+  <main id="board" class="board"></main>
+
+  <div id="empty" class="empty" hidden>
+    <img src="../icons/icon128.png" alt="" width="72" height="72">
+    <h2>No feedback yet</h2>
+    <p>Open any website, click the Foxio icon (or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>), then press <kbd>C</kbd> and click an element to leave a comment. It will show up here.</p>
+  </div>
+
+  <div id="scrim" class="scrim" hidden></div>
+  <aside id="drawer" class="drawer" hidden aria-label="Comment details"></aside>
+
+  <script src="../lib/heuristics.js"></script>
+  <script src="../lib/store.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
