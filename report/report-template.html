@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Foxio">
+<title>__TITLE__</title>
+<link rel="icon" href="__LOGO__">
+<style>/*__CSS__*/</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <img class="logo" src="__LOGO__" alt="" width="28" height="28">
+    <div class="titles">
+      <h1 id="title"></h1>
+      <p id="meta" class="muted"></p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <noscript><p class="noscript">This report needs JavaScript to display. Open it in a web browser such as Chrome, Safari, Firefox or Edge.</p></noscript>
+
+  <section class="summary" id="summary" aria-label="Summary"></section>
+
+  <div class="toolbar" role="search">
+    <div class="seg" role="group" aria-label="View">
+      <button data-view="list" type="button">List</button>
+      <button data-view="board" type="button">Board</button>
+    </div>
+    <input type="search" id="q" placeholder="Search comments&hellip;" aria-label="Search comments">
+    <select id="fPage" aria-label="Page"></select>
+    <select id="fPriority" aria-label="Priority"></select>
+    <select id="fStatus" aria-label="Status"></select>
+    <span class="spacer"></span>
+    <button type="button" id="print" class="btn">Print / PDF</button>
+  </div>
+
+  <p id="showing" class="muted showing" aria-live="polite"></p>
+  <div id="view"></div>
+
+  <section id="glossary" class="glossary" aria-labelledby="glossary-h"></section>
+</main>
+
+<footer class="foot muted">Generated with Foxio. This is a snapshot; it does not update when comments change.</footer>
+
+<dialog id="detail" class="detail" aria-label="Comment details"></dialog>
+
+<script type="application/json" id="foxio-data">__DATA__</script>
+<script>/*__JS__*/</script>
+</body>
+</html>

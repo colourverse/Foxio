@@ -14,6 +14,7 @@
     <div class="spacer"></div>
     <a class="btn" href="../heuristics/heuristics.html" title="What each usability heuristic means">Heuristics guide</a>
     <label class="me">You <input id="author" placeholder="Your name" autocomplete="name"></label>
+    <button id="shareReport" class="btn primary" title="Create a report anyone can open in a browser, without Foxio">Share report</button>
     <button id="exportJson" class="btn" title="Download everything, including screenshots, to share or back up">Export JSON</button>
     <button id="exportCsv" class="btn" title="Spreadsheet-friendly export (no screenshots)">Export CSV</button>
     <button id="importBtn" class="btn">Import</button>
@@ -58,6 +59,30 @@
     </form>
   </dialog>
 
+  <dialog id="reportDlg" class="dlg" aria-labelledby="repTitle">
+    <form method="dialog">
+      <h2 id="repTitle">Share a report</h2>
+      <p>Creates a single web page file with the comments, screenshots and a board view. Anyone can open it in a browser; they don’t need Foxio.</p>
+      <label class="dlg-field">Title<input id="repName" maxlength="120"></label>
+      <label class="dlg-field">Prepared by<input id="repBy" maxlength="80" placeholder="Your name or team"></label>
+      <fieldset id="repScope" class="scope" hidden><legend class="dlg-legend">Include</legend></fieldset>
+      <div class="dlg-checks">
+        <label><input type="checkbox" id="repDone" checked> Include completed (Done) comments</label>
+        <label><input type="checkbox" id="repShots" checked> Include screenshots</label>
+      </div>
+      <fieldset class="dlg-inline">
+        <legend class="dlg-legend">Opens in</legend>
+        <label><input type="radio" name="repView" value="list" checked> List view (best for reading and printing)</label>
+        <label><input type="radio" name="repView" value="board"> Board view</label>
+      </fieldset>
+      <p class="fine">Send the file by email or Slack, or upload it to any static web host to get a link. To make a PDF, open the file and choose <b>Print / PDF</b>. The report is a snapshot and won’t update.</p>
+      <div class="dlg-actions">
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="ok" class="btn primary" id="repOk">Download report</button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <div id="scrim" class="scrim" hidden></div>
@@ -65,6 +90,7 @@
 
   <script src="../lib/heuristics.js"></script>
   <script src="../lib/store.js"></script>
+  <script src="../report/build.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

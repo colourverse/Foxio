@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Foxio — Visual Design Feedback",
   "short_name": "Foxio",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Pin design comments and suggestions to any element on any web page, then triage them on a Kanban board.",
   "icons": {
     "16": "icons/icon16.png",

@@ -52,6 +52,27 @@ To open it:
 - **Deleting:** hover a card and click the trash icon, or focus a card and press `Delete`. **Clear** on a column deletes the cards shown in it, and **Clear board…** deletes everything (or, when filters are active, just the matching cards). Clearing asks first. Every delete can be undone from the toast for 8 seconds.
 - **Export / Import:** JSON includes everything, screenshots too, so you can share or back up. CSV is for spreadsheets. Importing merges by id, and the newer copy wins.
 
+### Sharing a report
+
+**Share report** on the board creates one self-contained HTML file that anyone can open in a browser, with no Foxio or install needed. It contains:
+- a summary (open count, priorities, most common heuristics)
+- a **List** view grouped by page, with screenshots and replies
+- a **Board** view with Kanban columns
+- search and filters, a detail view for each comment, and a glossary of the heuristics used
+
+When creating it you can set:
+- the title and "prepared by"
+- the scope (current filters or everything)
+- whether to include done items and screenshots
+- which view the report opens in
+
+To share it:
+- **As a file:** send it by email or Slack.
+- **As a link:** upload it to any static web host.
+- **As a PDF:** open the file and choose **Print / PDF**. Printing always uses the list view.
+
+The report is a snapshot. Comment text is escaped and links are restricted to web addresses, so content from comments can't run scripts in the report.
+
 ## Project layout
 
 ```
@@ -65,6 +86,7 @@ content/overlay.css    overlay styles
 popup/                 toolbar popup
 dashboard/             Kanban board (extension page)
 heuristics/            Heuristics guide (extension page; content lives in lib/heuristics.js)
+report/                Shareable report: build.js (generator) inlines report-template.html, report.css, report.js
 docs/PHASE2.md         plan for the automated UX audit
 ```
 

@@ -374,6 +374,63 @@
     if (list && list.length) deleteCards(list.map(c => c.id));
   };
 
+  // ------------------------------------------------------------- share report
+  function showToast(text) {
+    clearTimeout(undoTimer);
+    const t = $('toast');
+    t.innerHTML = `<span>${esc(text)}</span><button class="x" aria-label="Dismiss">×</button>`;
+    t.hidden = false;
+    t.querySelector('.x').onclick = () => { t.hidden = true; };
+    undoTimer = setTimeout(() => { t.hidden = true; }, 6000);
+  }
+
+  $('shareReport').onclick = () => {
+    const all = state.comments, shown = filtered();
+    if (!all.length) return showToast('Nothing to share yet: add some comments first.');
+    const narrowed = filtersActive() && shown.length < all.length;
+    const options = narrowed
+      ? [{ label: `The ${shown.length} comment${shown.length === 1 ? '' : 's'} matching your filters`, list: shown },
+         { label: `Everything on the board (${all.length})`, list: all }]
+      : [{ label: '', list: all }];
+    const scope = $('repScope');
+    scope.hidden = !narrowed;
+    scope.querySelectorAll('label').forEach(l => l.remove());
+    if (narrowed) options.forEach((o, i) => {
+      const l = document.createElement('label');
+      l.innerHTML = `<input type="radio" name="repScope" value="${i}"${i === 0 ? ' checked' : ''}> ${esc(o.label)}`;
+      scope.appendChild(l);
+    });
+    const chosen = () => options[narrowed ? +scope.querySelector('input:checked').value : 0].list;
+    const sync = () => {
+      const list = chosen().filter(c => $('repDone').checked || c.status !== 'done');
+      const shots = $('repShots').checked ? list.reduce((n, c) => n + (c.screenshot ? c.screenshot.length : 0), 0) : 0;
+      const mb = (shots + 60000) / 1048576;
+      $('repOk').textContent = `Download report (${list.length} comment${list.length === 1 ? '' : 's'}, ~${mb < 1 ? Math.max(0.1, mb).toFixed(1) : mb.toFixed(1)} MB)`;
+      $('repOk').disabled = !list.length;
+      $('repName').placeholder = FoxioReport.defaultTitle(list.length ? list : chosen());
+    };
+    $('repName').value = '';
+    $('repBy').value = state.settings.author || '';
+    $('reportDlg').onchange = sync;
+    sync();
+    const dlg = $('reportDlg');
+    dlg.returnValue = '';
+    dlg.showModal();
+    dlg.addEventListener('close', async () => {
+      if (dlg.returnValue !== 'ok') return;
+      const { html, count, title } = await FoxioReport.build({
+        comments: chosen(),
+        title: $('repName').value.trim() || $('repName').placeholder,
+        preparedBy: $('repBy').value.trim(),
+        includeShots: $('repShots').checked,
+        includeDone: $('repDone').checked,
+        view: dlg.querySelector('input[name="repView"]:checked').value
+      });
+      download(FoxioReport.fileName(title), html, 'text/html');
+      showToast(`Report downloaded with ${count} comment${count === 1 ? '' : 's'}`);
+    }, { once: true });
+  };
+
   function heurHint(id) {
     const h = HEUR.find(x => x.id === id);
     $('drHeurHint').innerHTML = h
