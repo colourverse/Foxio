@@ -15,6 +15,13 @@
   let ticker = null, rafQueued = false, lastHref = location.href;
   let audit = null; // { node, result, hoverEl, busy }
 
+  // While the pointer is on a pin (or its open card), that pin stays where it is
+  // on the page instead of following its element. Otherwise elements that move or
+  // resize on :hover create a loop: pointer on pin -> element loses hover and moves
+  // -> pin moves away -> pointer is over the element again -> it moves back.
+  const lastPos = new Map(); // comment id or 'draft' -> last viewport position
+  let frozenKey = null, frozenAt = null, unfreezeTimer = null;
+
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const isOurs = e => !!host && e.composedPath().includes(host);
   const frame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -72,6 +79,13 @@
     };
 
     root.addEventListener('click', onUIClick);
+    root.addEventListener('pointerover', e => { const k = freezeKeyOf(e.target); if (k) freeze(k); });
+    root.addEventListener('pointerout', e => {
+      if (!frozenKey || freezeKeyOf(e.relatedTarget) === frozenKey) return;
+      clearTimeout(unfreezeTimer);
+      // Grace period so moving from a pin to its card (across the page) doesn't unfreeze.
+      unfreezeTimer = setTimeout(() => { frozenKey = null; frozenAt = null; positionAll(); }, 300);
+    });
     // Keep our own interactions from reaching the page's handlers.
     ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'keydown', 'keyup', 'keypress', 'input', 'focusin']
       .forEach(t => host.addEventListener(t, e => e.stopPropagation()));
@@ -326,30 +340,58 @@
     positionAll();
   }
 
+  function freezeKeyOf(node) {
+    if (!node || !root || !(node instanceof Node) || node.getRootNode() !== root) return null;
+    const pin = node.closest && node.closest('.pin');
+    if (pin) return pin.dataset.id;
+    if (pop && pop.node.contains(node)) return pop.commentId || 'draft';
+    return null;
+  }
+
+  function freeze(key) {
+    clearTimeout(unfreezeTimer);
+    if (key === frozenKey) return;
+    const p = lastPos.get(key);
+    frozenKey = p ? key : null;
+    // Stored in document coordinates so a frozen pin still scrolls with the page.
+    frozenAt = p ? { x: p.x + window.scrollX, y: p.y + window.scrollY } : null;
+  }
+
+  function posFor(key, anchor) {
+    if (key === frozenKey && frozenAt) return { x: frozenAt.x - window.scrollX, y: frozenAt.y - window.scrollY, found: true, frozen: true };
+    const p = resolveAnchor(anchor);
+    lastPos.set(key, p);
+    return p;
+  }
+
   function positionAll() {
     if (!host || !active) return;
     const byId = new Map(comments.map(c => [c.id, c]));
     for (const n of el.pins.children) {
       const c = byId.get(n.dataset.id);
       if (!c) continue;
-      const p = resolveAnchor(c.anchor);
-      n.style.transform = `translate(${p.x}px, ${p.y}px)`;
-      n.classList.toggle('lost', !p.found);
+      const p = posFor(c.id, c.anchor);
+      // Use the `translate` property, not `transform`: the hover `scale` would
+      // otherwise multiply the offset and fling the pin away from the cursor.
+      n.style.translate = `${p.x}px ${p.y}px`;
+      if (!p.frozen) n.classList.toggle('lost', !p.found);
     }
     if (audit && audit.hoverEl) showHighlight(audit.hoverEl);
     if (pop) {
       let p = null;
-      if (pop.commentId) { const c = byId.get(pop.commentId); if (c) p = resolveAnchor(c.anchor); }
-      else if (pop.anchor) p = resolveAnchor(pop.anchor);
+      if (pop.commentId) { const c = byId.get(pop.commentId); if (c) p = posFor(c.id, c.anchor); }
+      else if (pop.anchor) p = posFor('draft', pop.anchor);
       if (p) {
         placePop(pop.node, p.x, p.y);
-        if (!pop.commentId) el.draftPin.style.transform = `translate(${p.x}px, ${p.y}px)`;
+        if (!pop.commentId) el.draftPin.style.translate = `${p.x}px ${p.y}px`;
       }
     }
   }
 
   // --------------------------------------------------------------- popovers
   function closePop() {
+    // A removed node may never fire pointerout, so drop a frozen draft position here.
+    if (frozenKey === 'draft') { frozenKey = null; frozenAt = null; }
     if (pop) pop.node.remove();
     pop = null;
     if (el.draftPin) el.draftPin.hidden = true;
