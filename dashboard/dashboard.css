@@ -132,3 +132,51 @@ a.btn { color: inherit; text-decoration: none; }
 .heur-hint { margin: -4px 0 0; font-size: 13px; color: var(--muted); background: var(--col); border-radius: 10px; padding: 9px 12px; }
 .heur-hint b { color: var(--fg); }
 .heur-hint a { color: var(--accent-ink); font-weight: 600; }
+
+/* ---------- delete, clear, undo */
+.card-del {
+  border: 0; background: none; color: var(--muted); cursor: pointer;
+  width: 26px; height: 26px; margin: -4px -6px -4px -2px; border-radius: 7px;
+  display: grid; place-items: center; opacity: 0; transition: opacity .12s;
+}
+.card-del svg { width: 16px; height: 16px; }
+.card:hover .card-del, .card:focus-within .card-del, .card:focus .card-del { opacity: 1; }
+.card-del:hover { color: var(--critical); background: rgba(217,48,37,.1); }
+.card-del:focus-visible { opacity: 1; outline: 2px solid var(--critical); }
+@media (hover: none) { .card-del { opacity: 1; } }
+
+.col-clear {
+  margin-left: auto; border: 0; background: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--muted); padding: 2px 8px; border-radius: 7px;
+}
+.col-clear:hover { color: var(--critical); background: rgba(217,48,37,.1); }
+.col-clear:focus-visible { outline: 2px solid var(--critical); }
+
+.btn.danger { color: var(--critical); }
+.btn.danger-fill { background: var(--critical); border-color: var(--critical); color: #fff; }
+.btn.danger-fill:hover { background: #b3261e; }
+
+.dlg { border: 0; border-radius: 16px; padding: 22px 24px; width: min(460px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); box-shadow: 0 24px 70px rgba(0,0,0,.3); }
+.dlg::backdrop { background: rgba(20,16,30,.4); }
+.dlg h2 { margin: 0 0 8px; font-size: 18px; }
+.dlg p { margin: 0 0 12px; }
+.dlg .fine { font-size: 13px; color: var(--muted); }
+.scope { border: 0; padding: 0; margin: 0 0 14px; display: flex; flex-direction: column; gap: 8px; }
+.scope label { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.scope label:has(input:checked) { border-color: var(--critical); background: rgba(217,48,37,.06); }
+.scope input { accent-color: var(--critical); margin: 0; }
+.linkbtn { border: 0; background: none; padding: 0; font: inherit; color: var(--accent-ink); font-weight: 600; text-decoration: underline; cursor: pointer; }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 30;
+  display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 16px; border-radius: 12px;
+  background: #1d1b22; color: #f4f1ee; box-shadow: 0 10px 30px rgba(0,0,0,.3); font-weight: 500;
+  animation: rise .18s ease-out; max-width: calc(100vw - 32px);
+}
+@keyframes rise { from { transform: translate(-50%, 10px); opacity: 0; } }
+.toast .undo { border: 0; background: none; color: #ff9a5c; font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.toast .undo:hover { background: rgba(255,255,255,.1); }
+.toast .x { border: 0; background: none; color: #a39ca8; font-size: 20px; line-height: 1; padding: 4px 8px; border-radius: 8px; cursor: pointer; }
+.toast .x:hover { color: #fff; background: rgba(255,255,255,.1); }

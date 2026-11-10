@@ -17,6 +17,7 @@
     <button id="exportJson" class="btn" title="Download everything, including screenshots, to share or back up">Export JSON</button>
     <button id="exportCsv" class="btn" title="Spreadsheet-friendly export (no screenshots)">Export CSV</button>
     <button id="importBtn" class="btn">Import</button>
+    <button id="clearBoard" class="btn danger" title="Delete comments from the board">Clear board&hellip;</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
   </header>
 
@@ -43,6 +44,21 @@
     <h2>No feedback yet</h2>
     <p>Open any website, click the Foxio icon (or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>), then press <kbd>C</kbd> and click an element to leave a comment. It will show up here.</p>
   </div>
+
+  <dialog id="confirmDlg" class="dlg" aria-labelledby="dlgTitle">
+    <form method="dialog">
+      <h2 id="dlgTitle"></h2>
+      <p id="dlgBody"></p>
+      <fieldset id="dlgScope" class="scope" hidden><legend class="sr-only">Which comments</legend></fieldset>
+      <p class="fine">You can undo this for a few seconds afterwards. To keep a permanent copy, <button type="button" class="linkbtn" id="dlgExport">export these as JSON</button> first.</p>
+      <div class="dlg-actions">
+        <button value="cancel" class="btn" autofocus>Cancel</button>
+        <button value="ok" class="btn danger-fill" id="dlgOk"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <div id="scrim" class="scrim" hidden></div>
   <aside id="drawer" class="drawer" hidden aria-label="Comment details"></aside>

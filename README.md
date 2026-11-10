@@ -49,6 +49,7 @@ To open it:
 - **Columns:** group by **Status** (Backlog → To do → In progress → Done) or by **Priority** (Critical → Low). Drag cards between columns to change that field, or within a column to reorder.
 - **Filters:** site, page, priority, type, heuristic, source (people or audit), plus full-text search.
 - **Card details:** click a card to edit it, reply, delete, or use **Show on page**. That opens the page, scrolls to the element and opens the comment.
+- **Deleting:** hover a card and click the trash icon, or focus a card and press `Delete`. **Clear** on a column deletes the cards shown in it, and **Clear board…** deletes everything (or, when filters are active, just the matching cards). Clearing asks first. Every delete can be undone from the toast for 8 seconds.
 - **Export / Import:** JSON includes everything, screenshots too, so you can share or back up. CSV is for spreadsheets. Importing merges by id, and the newer copy wins.
 
 ## Project layout

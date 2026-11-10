@@ -86,12 +86,19 @@
       const items = list.filter(c => c[state.groupBy] === col.id).sort((a, b) => a.order - b.order);
       return `
         <section class="col col-${col.id}" aria-label="${esc(col.label)}">
-          <header><span class="dot"></span><h2>${esc(col.label)}</h2><span class="n">${items.length}</span></header>
+          <header>
+            <span class="dot"></span><h2>${esc(col.label)}</h2><span class="n">${items.length}</span>
+            ${items.length ? `<button class="col-clear" data-act="clear-col" data-value="${col.id}" title="Delete the ${items.length} card${items.length > 1 ? 's' : ''} shown in ${esc(col.label)}">Clear</button>` : ''}
+          </header>
           <div class="col-list" data-value="${col.id}">
             ${items.map(card).join('') || '<p class="col-empty">Drop cards here</p>'}
           </div>
         </section>`;
     }).join('');
+    if (state.focusAfter) {
+      const target = document.querySelector(`.card[data-id="${state.focusAfter}"]`);
+      if (target) { target.focus(); state.focusAfter = null; }
+    }
   }
 
   function card(c) {
@@ -109,6 +116,9 @@
           <span class="type t-${c.type}">${esc(label(S.TYPES, c.type))}</span>
           ${c.source === 'audit' ? `<span class="type t-audit" title="Automated audit${c.audit && c.audit.severity ? ' \u00b7 ' + c.audit.severity : ''}">Audit</span>` : ''}
           <span class="num">#${c.number}</span>
+          <button class="card-del" data-act="delete" title="Delete (Del key)" aria-label="Delete comment #${c.number}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
         ${c.screenshot ? `<img class="thumb" src="${c.screenshot}" alt="" loading="lazy">` : ''}
         <p class="card-body">${esc(c.body)}</p>
@@ -175,12 +185,18 @@
 
   // ------------------------------------------------------------- drawer
   $('board').addEventListener('click', e => {
+    const del = e.target.closest('[data-act="delete"]');
+    if (del) { deleteCards([del.closest('.card').dataset.id], true); return; }
+    const clr = e.target.closest('[data-act="clear-col"]');
+    if (clr) { clearColumn(clr.dataset.value); return; }
     const c = e.target.closest('.card');
     if (c) openDrawer(c.dataset.id);
   });
   $('board').addEventListener('keydown', e => {
     const c = e.target.closest('.card');
-    if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openDrawer(c.dataset.id); }
+    if (!c || e.target !== c) return; // keys on the card's own buttons do their own thing
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(c.dataset.id); }
+    else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteCards([c.dataset.id], true); }
   });
 
   function openDrawer(id) {
@@ -259,10 +275,7 @@
     }));
     heurHint(c.heuristic);
     $('drOpen').onclick = () => chrome.runtime.sendMessage({ type: 'foxio:openComment', id: c.id });
-    $('drDelete').onclick = async () => {
-      if (!confirm(`Delete comment #${c.number}? This can't be undone.`)) return;
-      await S.remove(c.id);
-    };
+    $('drDelete').onclick = () => { closeDrawer(); deleteCards([c.id], true); };
     $('drReplyBtn').onclick = async () => {
       const v = $('drReply').value.trim();
       if (!v) return $('drReply').focus();
@@ -271,6 +284,95 @@
       document.activeElement.blur();
     };
   }
+
+  // ------------------------------------------------------------- delete, clear, undo
+  // Single deletes happen immediately with Undo; clearing many asks first, then also offers Undo.
+  async function deleteCards(ids, keepFocus) {
+    const list = ids.map(id => state.comments.find(c => c.id === id)).filter(Boolean);
+    if (!list.length) return;
+    if (keepFocus && list.length === 1) {
+      // Move keyboard focus to a neighbouring card once the board re-renders.
+      const el = document.querySelector(`.card[data-id="${list[0].id}"]`);
+      const sib = el && (el.nextElementSibling || el.previousElementSibling);
+      state.focusAfter = sib && sib.classList.contains('card') ? sib.dataset.id : null;
+    }
+    await S.removeMany(list.map(c => c.id));
+    showUndo(list.length === 1 ? `Comment #${list[0].number} deleted` : `${list.length} comments deleted`, list);
+  }
+
+  let undoTimer = null;
+  function showUndo(text, list) {
+    clearTimeout(undoTimer);
+    const t = $('toast');
+    t.innerHTML = `<span>${esc(text)}</span><button class="undo">Undo</button><button class="x" aria-label="Dismiss">×</button>`;
+    t.hidden = false;
+    const hide = () => { clearTimeout(undoTimer); t.hidden = true; };
+    t.querySelector('.undo').onclick = async () => { hide(); await S.restore(list); };
+    t.querySelector('.x').onclick = hide;
+    undoTimer = setTimeout(hide, 8000);
+  }
+
+  function filtersActive() {
+    const { q, site, page, priority, type, heur, source } = state.f;
+    return !!(q.trim() || site || page || priority || type || heur || source);
+  }
+
+  // Confirm dialog. options: [{ label, list }]; resolves with the chosen list, or null.
+  function confirmDelete({ title, body, options }) {
+    const dlg = $('confirmDlg');
+    $('dlgTitle').textContent = title;
+    $('dlgBody').textContent = body;
+    const scope = $('dlgScope');
+    scope.hidden = options.length < 2;
+    scope.querySelectorAll('label').forEach(l => l.remove());
+    options.forEach((o, i) => {
+      const l = document.createElement('label');
+      l.innerHTML = `<input type="radio" name="scope" value="${i}"${i === 0 ? ' checked' : ''}> ${esc(o.label)}`;
+      scope.appendChild(l);
+    });
+    const chosen = () => options[options.length < 2 ? 0 : +scope.querySelector('input:checked').value].list;
+    const sync = () => { const n = chosen().length; $('dlgOk').textContent = `Delete ${n} comment${n === 1 ? '' : 's'}`; };
+    scope.onchange = sync;
+    sync();
+    $('dlgExport').onclick = () => download(`foxio-backup-${stamp()}.json`,
+      JSON.stringify({ app: 'foxio', version: 1, exportedAt: Date.now(), comments: chosen() }, null, 2), 'application/json');
+    dlg.returnValue = '';
+    dlg.showModal();
+    return new Promise(resolve => {
+      dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok' ? chosen() : null), { once: true });
+    });
+  }
+
+  async function clearColumn(value) {
+    const col = columns().find(x => x.id === value);
+    const items = filtered().filter(c => c[state.groupBy] === value);
+    if (!items.length) return;
+    if (items.length === 1) return deleteCards([items[0].id]);
+    const list = await confirmDelete({
+      title: `Clear “${col.label}”?`,
+      body: `This deletes the ${items.length} comments in this column${filtersActive() ? ' that match your current filters' : ''}, including their screenshots and replies. Their pins disappear from the pages too.`,
+      options: [{ label: '', list: items }]
+    });
+    if (list) deleteCards(list.map(c => c.id));
+  }
+
+  $('clearBoard').onclick = async () => {
+    const all = state.comments, shown = filtered();
+    if (!all.length) return;
+    const narrowed = filtersActive() && shown.length < all.length;
+    const options = narrowed
+      ? [{ label: `Only the ${shown.length} comment${shown.length === 1 ? '' : 's'} matching your filters`, list: shown },
+         { label: `Everything on the board (${all.length})`, list: all }]
+      : [{ label: '', list: all }];
+    const list = await confirmDelete({
+      title: 'Clear the board?',
+      body: narrowed
+        ? 'Choose what to delete. Screenshots and replies are deleted too, and the pins disappear from the pages.'
+        : `This deletes all ${all.length} comments on every site, including screenshots and replies. Their pins disappear from the pages too.`,
+      options
+    });
+    if (list && list.length) deleteCards(list.map(c => c.id));
+  };
 
   function heurHint(id) {
     const h = HEUR.find(x => x.id === id);
